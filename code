@@ -1,0 +1,58 @@
+import pandas as pd
+from bs4 import BeautifulSoup
+import requests
+import time
+
+
+
+# Connect to Website and pull in data
+url = 'https://www.linkedin.com/jobs/data-analyst-jobs/?currentJobId=3841883690'
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 YaBrowser/24.4.0.0 Safari/537.36",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "DNT": "1",
+    "Connection": "close",
+    "Upgrade-Insecure-Requests": "1"}
+
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.content, "html.parser")
+
+
+def job_search(data):
+    print(data.iloc[1:])  # Assuming data is a pandas DataFrame
+
+
+title_elements = soup.find_all('span', class_="sr-only")
+location_elements = soup.find_all('span', class_="job-search-card__location")
+date_elements = soup.find_all('time', datetime=True)
+link_elements = soup.find_all('a', href=True)
+
+# Extract text content and links from the elements
+titles = [title.text.strip() for title in title_elements]
+locations = [location.text.strip() for location in location_elements]
+dates = [date['datetime'] for date in date_elements]
+links = [link['href'] for link in link_elements]
+
+# Ensure equal length for titles, locations, and links
+min_length = min(len(titles), len(locations), len(dates), len(links))
+titles = titles[:min_length]
+locations = locations[:min_length]
+dates = dates[:min_length]
+links = links[:min_length]
+
+# Create a DataFrame
+jobs_df = pd.DataFrame({
+    'Title': titles,
+    'Location': locations,
+    'Date': dates,
+    'Link': links
+})
+
+# Save DataFrame to CSV
+jobs_df.to_csv('LinkedIn_Web_Scraper_Dataset.csv', index=False)
+
+# Continuous scraping with a sleep interval
+while True:
+    job_search(jobs_df)
+    time.sleep(86400)    # Sleep for 24 hours 60x60x24
